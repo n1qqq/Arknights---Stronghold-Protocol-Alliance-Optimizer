@@ -4,7 +4,7 @@ from scaffold import Chara
 chara_pool = {
     'Muelsyse': Chara('Yan', 'Sargon', 'Victoria', 'Kjerag', 'Laterano', 'Aegir', 'Siracusa', 'Kazimierz', 'Harmony'),
 
-    'Leizi': Chara('Yan'), 'Swire': Chara('Yan'), 'Swire the Elegant Wit': Chara('Yan'), 'Record Keeper': Chara('Yan'), 'Dusk': Chara('Arcane', 'Yan'),
+    'Leizi': Chara('Yan'), 'Swire': Chara('Yan', 'Foresight'), 'Swire the Elegant Wit': Chara('Yan', 'Investor'), 'Record Keeper': Chara('Yan'), 'Dusk': Chara('Arcane', 'Yan'),
     'Yu': Chara('Bastion', 'Yan'),
 
     'Titi': Chara('Sargon', 'Precision'), 'Passenger': Chara('Sargon', 'Swift', 'Solitary'), 'Minimalist': Chara('Sargon', 'Agility'), 'Bubble': Chara('Sargon', 'Bastion'), 'Beeswax': Chara('Sargon', 'Support'),
@@ -12,7 +12,7 @@ chara_pool = {
 
     'Vendela': Chara('Victoria', 'Support'), 'Rockrock': Chara('Victoria', 'Arcane'), 'Bagpipe': Chara('Victoria', 'Tenacity'), 'Vina Victoria': Chara('Victoria'),
     'Harold': Chara('Victoria', 'Kjerag'),
-    'Matterhorn': Chara('Kjerag', 'Bastion'), 'Snow Hunter': Chara('Kjerag', 'Precision'), 'SilverAsh the Reignfrost': Chara('Kjerag', 'Swift'), 'Gnosis': Chara('Kjerag', 'Agility'),
+    'Matterhorn': Chara('Kjerag', 'Bastion'), 'Snow Hunter': Chara('Kjerag', 'Precision'), 'SilverAsh the Reignfrost': Chara('Kjerag', 'Swift', 'Investor'), 'Gnosis': Chara('Kjerag', 'Agility'),
     'Pramanix the Prerita': Chara('Kjerag', 'Arcane'), 'Kjera': Chara('Kjerag', 'Support'), 'Pramanix': Chara('Kjerag'), 'Cliffheart': Chara('Kjerag', 'Tenacity'),
     'Degenbrecher': Chara('Kjerag', 'Kazimierz', 'Swift'),
     'Wild Mane': Chara('Kazimierz', 'Swift'), 'Ashlock': Chara('Kazimierz', 'Bastion'), 'Gravel': Chara('Kazimierz', 'Tenacity'),
@@ -29,9 +29,9 @@ chara_pool = {
 
     'Gum': Chara('Bastion'), 'Vetochki': Chara('Bastion', 'Solitary'), 'Cuora': Chara('Bastion', 'Tenacity'), 'Saria': Chara('Bastion', 'Solitary'),
     'Vigna': Chara('Tenacity'), 'Entelechia': Chara('Tenacity', 'Agility'),
-    'Ines': Chara('Assault'), 'Surtr': Chara('Assault', 'Arcane'),
+    'Ines': Chara('Assault', 'Foresight'), 'Surtr': Chara('Assault', 'Arcane'),
     'Tippi': Chara('Swift', 'Agility'), 'Pinecone': Chara('Swift', 'Cover'), 'Leonhardt': Chara('Swift', 'Precision'), 'Thorns the Lodestar': Chara('Swift'), 'Nymph': Chara('Swift'),
-    'Rosmontis': Chara('Precision', 'Cover'),
+    'Rosmontis': Chara('Precision', 'Cover', 'Foresight'),
     'Indigo': Chara('Arcane'), 'Akkord': Chara('Arcane', 'Support'), 'Astgenne the Lightchaser': Chara('Arcane', 'Agility'),
     'Ptilopsis': Chara('Agility', 'Support'),
     'Podenco': Chara('Support'), 'Perfumer': Chara('Support'), 'Lumen': Chara('Support'), 'Eyjafjalla the Hvit Aska': Chara('Support'),
