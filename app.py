@@ -7,7 +7,8 @@ from data import chara_pool
 from ortools.sat.python import cp_model
 
 # --- UI Header ---
-st.title("Arknights: Stronghold Protocol Alliance 2 Faction Optimizer")
+st.title("Stronghold Protocol Alliance 2: Faction Optimizer")
+st.header("Arknights")
 st.markdown("Calculate the theoretical maximum faction light-ups for your squad!")
 
 # --- User Input ---
@@ -130,6 +131,9 @@ def solve_stronghold(chara_pool, max_deployment=9):
     status = solver.Solve(model)
 
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+        icon_names = 'celebration', 'campaign', 'cloud_done', 'crown', 'trophy', \
+                     'rocket_launch', 'task_alt', 'check', 'check_circle', 'data_check'
+        st.badge("Success", icon=f":material/{random.choice(icon_names)}:", color="green")
         st.success(f"### Theoretical Maximum Light-ups: {int(solver.ObjectiveValue())}")
 
         deployed_names = [name for name in chara_pool if solver.Value(is_deployed[name])]
@@ -144,7 +148,7 @@ def solve_stronghold(chara_pool, max_deployment=9):
             else:
                 inactive_factions.append(f"❌ ~~{tag_name}~~ ({count})")
 
-        col_assign, col_status = st.columns([1.2, 1])
+        col_assign, col_status = st.columns([1.3, 1])
 
         with col_assign:
             st.subheader("⚔️ Personnel Assignment 🛡️")
