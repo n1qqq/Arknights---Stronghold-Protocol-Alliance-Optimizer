@@ -130,8 +130,10 @@ def solve_maximum_lightups(chara_pool, max_deployment=9):
     status = solver.Solve(model)
 
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-        deployed_names = [name for name in chara_pool if solver.Value(is_deployed[name])]
         print(f"Theoretical Max Light-ups: {int(solver.ObjectiveValue())}")
+
+        deployed_names = [name for name in chara_pool if solver.Value(is_deployed[name])]
+        prep_names = get_prep_zone_layout(chara_pool, deployed_names)
 
         print("\n--- Squad Deployment ---")
         for name in deployed_names:
@@ -139,7 +141,7 @@ def solve_maximum_lightups(chara_pool, max_deployment=9):
             print(f"- {name}{extra}")
 
         print("\n--- Preparation Zone ---")
-        for name in get_prep_zone_layout(chara_pool, deployed_names):
+        for name in prep_names:
             extra = next((f" (+ {t})" for t, v in extra_tag[name].items() if solver.Value(v)), "")
             print(f"- {name}{extra}")
 
