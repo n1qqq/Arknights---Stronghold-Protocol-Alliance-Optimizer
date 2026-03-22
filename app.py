@@ -8,7 +8,7 @@ from ortools.sat.python import cp_model
 
 # --- UI Header ---
 st.title("Stronghold Protocol Alliance 2: Faction Optimizer")
-st.header("Arknights")
+st.subheader("Arknights", False, text_alignment="right")
 st.markdown("Calculate the theoretical maximum faction light-ups for your squad!")
 
 # --- User Input ---
@@ -133,7 +133,8 @@ def solve_stronghold(chara_pool, max_deployment=9):
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         icon_names = 'celebration', 'campaign', 'cloud_done', 'crown', 'trophy', \
                      'rocket_launch', 'task_alt', 'check', 'check_circle', 'data_check'
-        st.badge("Success", icon=f":material/{random.choice(icon_names)}:", color="green")
+        st.badge("Success!", icon=f":material/{random.choice(icon_names)}:", color="green",
+                 help="")
         st.success(f"### Theoretical Maximum Light-ups: {int(solver.ObjectiveValue())}")
 
         deployed_names = [name for name in chara_pool if solver.Value(is_deployed[name])]
@@ -157,7 +158,8 @@ def solve_stronghold(chara_pool, max_deployment=9):
             for name in deployed_names:
                 # Check extra tag (at most 1)
                 extra = next((f" (+ {t})" for t, v in extra_tag[name].items() if solver.Value(v)), "")
-                st.info(f"**{name}**{extra}")
+                tags_covered = [t for t in TAGS_DEF if chara_pool[name].has_tag(TAGS[t])]
+                st.info(f"**{name}**{extra} \n*{', '.join(tags_covered)}*")
 
             st.divider()
 
@@ -165,13 +167,13 @@ def solve_stronghold(chara_pool, max_deployment=9):
             if not prep_names:
                 st.write("No specific bench units required.")
             for name in prep_names:
-                # Show which Prep Tags this character is satisfying
                 tags_covered = [t for t in PREP_ZONE_FACTIONS if chara_pool[name].has_tag(TAGS[t])]
                 st.warning(f"**{name}** \n*{', '.join(tags_covered)}*")
 
         with col_status:
             st.subheader("📋 Faction Status 🎯")
 
+            st.caption("ACTIVATED / LIT-UP")
             for payload in active_factions:
                 st.write(payload)
 
