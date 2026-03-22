@@ -1,5 +1,8 @@
+# app.py
+import random
+
 import streamlit as st
-from scaffold import Character
+from scaffold import Protocol, Character
 from data import chara_pool
 from ortools.sat.python import cp_model
 
@@ -8,17 +11,16 @@ st.title("Arknights: Stronghold Protocol Alliance II Optimizer")
 st.markdown("Calculate the theoretical maximum faction light-ups for your squad!")
 
 # --- User Input ---
-# This creates a searchable dropdown for users to select who they DO NOT have/want
 all_charas = list(chara_pool.keys())
-ban_list = st.multiselect(
-    "Select Operators to BAN (e.g., they are unavailable or you don't want to keep them in final line-ups):",
+ban_factions = st.multiselect(
+    "Select Operators to BAN (e.g., they are unavailable or you don't want to keep them in final line-up):",
     options=all_charas,
-    default=[] # set default bans here
+    default=[]  # set default bans here
 )
 
 # --- Data Cleaning ---
-# Create a fresh copy of the pool for this specific run
-current_pool = {name: chara for name, chara in chara_pool.items() if name not in ban_list}
+current_pool = {name: chara for name, chara in chara_pool.items() if name not in ban_factions}
+p = Protocol(current_pool)
 
 # --- Core Function ---
 TAGS = Character.TAGS
@@ -26,11 +28,26 @@ TAGS_DEF = Character.TAGS_DEF
 
 MAJOR_FACTIONS = TAGS_DEF[:8]
 ALLOWED_EXTRA_MINOR = TAGS_DEF[8:14]
-ALLOWED_EXTRA_TAGS = MAJOR_FACTIONS + ALLOWED_EXTRA_MINOR
+ALLOWED_EXTRA_TAGS = TAGS_DEF[:14]
 
 MINOR_FACTIONS = TAGS_DEF[8:17]
 SPECIAL_MINOR = TAGS_DEF[17]
 SOLO_FACTION = TAGS_DEF[18]
+
+PREP_ZONE_FACTIONS = TAGS_DEF[19:22]
+PROMOTION_FACTION = TAGS_DEF[22]
+GLOBAL_FACTIONS = TAGS_DEF[19:23]
+
+global_status = {}
+global_reqs = {
+    'Foresight': 2,
+    'Miracle': 2,
+    'Investor': 3,
+    'Skill': 0  # Always on
+}
+for tag, threshold in global_reqs.items():
+    global_status[tag] = p.count_tag(TAGS[tag]) >= threshold
+
 
 def solve_stronghold(chara_pool, max_deployment=9):
     model = cp_model.CpModel()
@@ -41,10 +58,19 @@ def solve_stronghold(chara_pool, max_deployment=9):
     # extra_tag[name][tag]: 1 if character 'name' equips extra 'tag'
     extra_tag = {}
     for name in chara_pool:
-        extra_tag[name] = {tag: model.NewBoolVar(f"extra_{name}_{tag}") for tag in ALLOWED_EXTRA_TAGS}
+        extra_tag[name] = {tag_name: model.NewBoolVar(f"extra_{name}_{tag_name}") for tag_name in ALLOWED_EXTRA_TAGS}
 
     tag_count = {tag_name: model.NewIntVar(0, max_deployment * 2, f"count_{tag_name}") for tag_name in TAGS_DEF}
-    tag_active = {tag_name: model.NewBoolVar(f"active_{tag_name}") for tag_name in TAGS_DEF}
+    tag_active = {}
+
+    for tag_name in TAGS_DEF:
+        if tag_name in global_reqs:
+            # These are constants! 1 if pre-calculated as True, else 0
+            is_on = 1 if global_status[tag_name] else 0
+            tag_active[tag_name] = model.NewConstant(is_on)
+        else:
+            # These remain as Booleans
+            tag_active[tag_name] = model.NewBoolVar(f"active_{tag_name}")
 
     # --- 2. Constraints ---
     model.Add(sum(is_deployed.values()) <= max_deployment)
@@ -53,9 +79,9 @@ def solve_stronghold(chara_pool, max_deployment=9):
         # Each deployed character can have AT MOST one extra tag
         model.Add(sum(extra_tag[name].values()) <= is_deployed[name])
         # A character cannot pick a duplicating tag when they already possess it
-        for t_name in ALLOWED_EXTRA_TAGS:
-            if chara_pool[name].has_tag(TAGS[t_name]):
-                model.Add(extra_tag[name][t_name] == 0)
+        for tag_name in ALLOWED_EXTRA_TAGS:
+            if chara_pool[name].has_tag(TAGS[tag_name]):
+                model.Add(extra_tag[name][tag_name] == 0)
 
     # Calculate total tag counts
     for tag_name in TAGS_DEF:
@@ -68,7 +94,15 @@ def solve_stronghold(chara_pool, max_deployment=9):
             if tag_name in ALLOWED_EXTRA_TAGS:
                 extra_contrib.append(extra_tag[name][tag_name])
 
-        model.Add(tag_count[tag_name] == sum(innate_contrib) + sum(extra_contrib))
+        if tag_name == PROMOTION_FACTION:
+            model.Add(tag_count[tag_name] == 2)
+        elif tag_name in PREP_ZONE_FACTIONS:
+            total_pool_count = p.count_tag(TAGS[tag_name])
+            # Count = (Innate Deployed + Extra Deployed) + (Total Pool - Innate Deployed)
+            #       = Extra Deployed + Total Pool
+            model.Add(tag_count[tag_name] == sum(extra_contrib) + total_pool_count)
+        else:
+            model.Add(tag_count[tag_name] == sum(innate_contrib) + sum(extra_contrib))
 
     # Activation Logic
     for tag_name in TAGS_DEF:
@@ -98,26 +132,76 @@ def solve_stronghold(chara_pool, max_deployment=9):
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         st.success(f"### Theoretical Maximum Light-ups: {int(solver.ObjectiveValue())}")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("Squad Deployment")
-            for name in chara_pool:
-                if solver.Value(is_deployed[name]):
-                    extra = next((f" (+ {t})" for t, v in extra_tag[name].items() if solver.Value(v)), "")
-                    st.write(f"**{name}**{extra}")
+        deployed_names = [name for name in chara_pool if solver.Value(is_deployed[name])]
+        prep_names = get_prep_zone_layout(chara_pool, deployed_names)
 
-        with col2:
-            st.subheader("Activated Factions")
-            for tag_name in TAGS:
-                if solver.Value(tag_active[tag_name]):
-                    st.write(f"[ON] {tag_name} (Count: {solver.Value(tag_count[tag_name])})")
+        active_factions, inactive_factions = [], []
+        for tag_name in TAGS_DEF:
+            count = solver.Value(tag_count[tag_name])
+            if solver.Value(tag_active[tag_name]):
+                icon = "☑" if tag_name in GLOBAL_FACTIONS else "✅"
+                active_factions.append(f"{icon} **{tag_name}** ({count})")
+            else:
+                inactive_factions.append(f"❌ ~~{tag_name}~~ ({count})")
 
-            st.subheader("Deactivated Factions")
-            for tag_name in TAGS:
-                if not solver.Value(tag_active[tag_name]):
-                    st.write(f"[OFF] {tag_name} (Count: {solver.Value(tag_count[tag_name])})")
+        col_assign, col_status = st.columns([1, 1.2])
+
+        with col_assign:
+            st.subheader("⚔️ Personnel Assignment 🛡️")
+
+            st.caption("DEPLOY TO FIELD (SQUAD)")
+            for name in deployed_names:
+                # Check extra tag (at most 1)
+                extra = next((f" (+ {t})" for t, v in extra_tag[name].items() if solver.Value(v)), "")
+                st.info(f"**{name}**{extra}")
+
+            st.divider()
+
+            st.caption("PLACE IN PREPARATION ZONE (BENCH)")
+            if not prep_names:
+                st.write("No specific bench units required.")
+            for name in prep_names:
+                # Show which Prep Tags this character is satisfying
+                tags_covered = [t for t in PREP_ZONE_FACTIONS if chara_pool[name].has_tag(TAGS[t])]
+                st.warning(f"**{name}** \n*{', '.join(tags_covered)}*")
+
+        with col_status:
+            st.subheader("📋 Faction Status 🎯")
+
+            for payload in active_factions:
+                st.write(payload)
+
+            if inactive_factions:
+                st.divider()
+                st.caption("DEACTIVATED / MISSED")
+                for payload in inactive_factions:
+                    st.write(payload)
     else:
         st.error("No valid solution found.")
+
+
+def get_prep_zone_layout(full_pool, deployed_names):
+    bench_names = [name for name in full_pool if name not in deployed_names]
+    random.shuffle(bench_names)
+
+    requirements = {}
+    for tag, threshold in global_reqs.items():
+        count_in_squad = sum(1 for name in deployed_names if full_pool[name].has_tag(TAGS[tag]))
+        requirements[tag] = max(0, threshold - count_in_squad)
+
+    prep_squad = set()
+
+    for tag, needed in requirements.items():
+        found = 0
+        for name in bench_names:
+            if found >= needed:
+                break
+            if name not in prep_squad and full_pool[name].has_tag(TAGS[tag]):
+                prep_squad.add(name)
+                found += 1
+
+    return prep_squad
+
 
 # --- Execution ---
 if st.button("Run Optimizer"):
