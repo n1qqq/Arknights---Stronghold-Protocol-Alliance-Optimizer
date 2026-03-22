@@ -7,13 +7,13 @@ from data import chara_pool
 from ortools.sat.python import cp_model
 
 # --- UI Header ---
-st.title("Arknights: Stronghold Protocol Alliance II Optimizer")
+st.title("Arknights: Stronghold Protocol Alliance 2 Faction Optimizer")
 st.markdown("Calculate the theoretical maximum faction light-ups for your squad!")
 
 # --- User Input ---
 all_charas = list(chara_pool.keys())
 ban_factions = st.multiselect(
-    "Select Operators to BAN (e.g., they are unavailable or you don't want to keep them in final line-up):",
+    "Select Operators to BAN (e.g., they are unavailable or you don't want to keep them in your final line-up):",
     options=all_charas,
     default=[]  # set default bans here
 )
@@ -144,7 +144,7 @@ def solve_stronghold(chara_pool, max_deployment=9):
             else:
                 inactive_factions.append(f"❌ ~~{tag_name}~~ ({count})")
 
-        col_assign, col_status = st.columns([1, 1.2])
+        col_assign, col_status = st.columns([1.2, 1])
 
         with col_assign:
             st.subheader("⚔️ Personnel Assignment 🛡️")
