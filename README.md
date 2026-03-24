@@ -3,7 +3,7 @@ Calculate the theoretical maximum #faction light-ups for your squad!
 
 ## Web App
 
-https://stronghold-synergy.streamlit.app/
+https://stronghold-s.streamlit.app/
 
 
 ## Local ver.
