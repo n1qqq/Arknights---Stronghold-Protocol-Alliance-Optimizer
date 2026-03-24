@@ -54,7 +54,7 @@ def filter_sort_ctrl(chara_pool):
 
 
 ban_list = filter_sort_ctrl(chara_pool)
-st.session_state.user_bans = st.multiselect(
+st.multiselect(
     "Select Operators to BAN (e.g., they are unavailable or you don't want them in your final line-up):",
     options=ban_list,
     key="user_bans",
