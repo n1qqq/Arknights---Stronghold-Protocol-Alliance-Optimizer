@@ -57,7 +57,7 @@ ban_list = filter_sort_ctrl(chara_pool)
 st.session_state.user_bans = st.multiselect(
     "Select Operators to BAN (e.g., they are unavailable or you don't want them in your final line-up):",
     options=ban_list,
-    default=[],
+    key="user_bans",
     format_func=lambda x: f"[{chara_pool[x].tier_roman}] {x}"
 )
 
