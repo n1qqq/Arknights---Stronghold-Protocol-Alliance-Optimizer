@@ -8,13 +8,15 @@ from ortools.sat.python import cp_model
 TAGS = Character.TAGS
 TAGS_DEF = Character.TAGS_DEF
 
+
+# --- SET BANNED OPERATORS HERE ---
 ban_list = 'Leizi', 'Mwynar'
+# --- END BANNED OPERATORS LIST ---
+
 
 for chara in ban_list:
     if chara in chara_pool:
         del chara_pool[chara]
-
-p = Protocol(chara_pool)
 
 
 # --- TEST INITIAL DATA HERE  ---
@@ -22,7 +24,7 @@ test_init = False
 
 if test_init:
     for tag in TAGS.values():
-        print(tag, p.count_tag(tag))
+        print(tag, Protocol(chara_pool).count_tag(tag))
 # --- INITIAL DATA TESTS END  ---
 
 
@@ -38,21 +40,26 @@ PREP_ZONE_FACTIONS = TAGS_DEF[19:22]
 PROMOTION_FACTION = TAGS_DEF[22]
 GLOBAL_FACTIONS = TAGS_DEF[19:23]
 
-global_status = {}
 global_reqs = {
-    'Foresight': 2,
-    'Miracle': 2,
-    'Investor': 3,
-    'Skill': 0  # Always on
+    "Foresight": 2,
+    "Miracle": 2,
+    "Investor": 3,
+    "Skill": 0      # Always on (later flipped off if character pool is too scarce, i.e. < 2 people)
 }
-for tag, threshold in global_reqs.items():
-    global_status[tag] = p.count_tag(TAGS[tag]) >= threshold
 
 
 def solve_maximum_lightups(chara_pool, max_deployment=9):
     model = cp_model.CpModel()
 
     # --- 1. Variables ---
+    p = Protocol(chara_pool)
+
+    global_status = {}
+    for tag, threshold in global_reqs.items():
+        global_status[tag] = p.count_tag(TAGS[tag]) >= threshold
+    # Can't have 2 promotions if you don't even have 2 people!
+    global_status["Skill"] = len(chara_pool) >= 2
+
     is_deployed = {name: model.NewBoolVar(f"deploy_{name}") for name in chara_pool}
 
     # extra_tag[name][tag]: 1 if character 'name' equips extra 'tag'
@@ -95,7 +102,7 @@ def solve_maximum_lightups(chara_pool, max_deployment=9):
                 extra_contrib.append(extra_tag[name][tag_name])
 
         if tag_name == PROMOTION_FACTION:
-            model.Add(tag_count[tag_name] == 2)
+            model.Add(tag_count[tag_name] == min(len(chara_pool), 2))
         elif tag_name in PREP_ZONE_FACTIONS:
             total_pool_count = p.count_tag(TAGS[tag_name])
             # Count = (Innate Deployed + Extra Deployed) + (Total Pool - Innate Deployed)
