@@ -41,10 +41,10 @@ GLOBAL_FACTIONS = TAGS_DEF[19:23]
 
 global_status = {}
 global_reqs = {
-    'Foresight': 2,
-    'Miracle': 2,
-    'Investor': 3,
-    'Skill': 0  # Always on
+    "Foresight": 2,
+    "Miracle": 2,
+    "Investor": 3,
+    "Skill": 0  # Always on
 }
 for tag, threshold in global_reqs.items():
     global_status[tag] = p.count_tag(TAGS[tag]) >= threshold
@@ -56,7 +56,7 @@ def solve_stronghold(chara_pool, max_deployment=9):
     # --- 1. Variables ---
     is_deployed = {name: model.NewBoolVar(f"deploy_{name}") for name in chara_pool}
 
-    # extra_tag[name][tag]: 1 if character 'name' equips extra 'tag'
+    # extra_tag[name][tag]: 1 if character "name" equips extra "tag"
     extra_tag = {}
     for name in chara_pool:
         extra_tag[name] = {tag_name: model.NewBoolVar(f"extra_{name}_{tag_name}") for tag_name in ALLOWED_EXTRA_TAGS}
@@ -131,8 +131,8 @@ def solve_stronghold(chara_pool, max_deployment=9):
     status = solver.Solve(model)
 
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-        icon_names = 'celebration', 'campaign', 'cloud_done', 'crown', 'trophy', \
-                     'rocket_launch', 'task_alt', 'check', 'check_circle', 'data_check'
+        icon_names = "celebration", "campaign", "cloud_done", "crown", "trophy", \
+                     "rocket_launch", "task_alt", "check", "check_circle", "data_check"
         st.badge("Success!", icon=f":material/{random.choice(icon_names)}:", color="green",
                  help="")
         st.success(f"### Theoretical Maximum Light-ups: {int(solver.ObjectiveValue())}")
