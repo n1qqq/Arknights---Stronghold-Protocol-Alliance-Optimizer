@@ -48,7 +48,7 @@ global_reqs = {
 }
 
 
-def solve_maximum_lightups(chara_pool, max_deployment=9):
+def solve_maximum_lightups(chara_pool, max_deployment=9, allow_extra=True):
     model = cp_model.CpModel()
 
     # --- 1. Variables ---
@@ -82,13 +82,18 @@ def solve_maximum_lightups(chara_pool, max_deployment=9):
     # --- 2. Constraints ---
     model.Add(sum(is_deployed.values()) <= max_deployment)
 
-    for name in chara_pool:
-        # Each deployed character can have AT MOST one extra tag
-        model.Add(sum(extra_tag[name].values()) <= is_deployed[name])
-        # A character cannot pick a duplicating tag when they already possess it
-        for tag_name in ALLOWED_EXTRA_TAGS:
-            if chara_pool[name].has_tag(TAGS[tag_name]):
+    if not allow_extra:
+        for name in chara_pool:
+            for tag_name in ALLOWED_EXTRA_TAGS:
                 model.Add(extra_tag[name][tag_name] == 0)
+    else:
+        for name in chara_pool:
+            # Each deployed character can have AT MOST one extra tag
+            model.Add(sum(extra_tag[name].values()) <= is_deployed[name])
+            # A character cannot pick a duplicating tag when they already possess it
+            for tag_name in ALLOWED_EXTRA_TAGS:
+                if chara_pool[name].has_tag(TAGS[tag_name]):
+                    model.Add(extra_tag[name][tag_name] == 0)
 
     # Calculate total tag counts
     for tag_name in TAGS_DEF:
