@@ -20,7 +20,7 @@ st.markdown("Calculate the theoretical maximum faction light-ups for your squad!
 def filter_sort_ctrl(chara_pool):
     # --- SIDEBAR: Filter & Sort Controls ---
     with st.sidebar:
-        st.header("🎛️ Roster Controls")
+        st.header("Roster Controls")
         sort_order = st.selectbox("Sort BAN List By:",
                                   ["Default (Faction)", "Tier", "Name"])
         reverse_sort = st.checkbox("Reverse Order", value=False)
@@ -57,11 +57,18 @@ ban_list = filter_sort_ctrl(chara_pool)
 st.session_state.user_bans = st.multiselect(
     "Select Operators to BAN (e.g., they are unavailable or you don't want them in your final line-up):",
     options=ban_list,
-    default=st.session_state.user_bans,
+    default=[],
     format_func=lambda x: f"[{chara_pool[x].tier_roman}] {x}"
 )
 
 current_pool = {name: chara for name, chara in chara_pool.items() if name not in st.session_state.user_bans}
+
+col1, col2 = st.columns([1, 1.3])
+with col1:
+    allow_extra = st.toggle("Allow Extra Tag Equipment", value=True,
+                            help="Enable to allow operators to carry an additional faction tag.")
+with col2:
+    max_deployment = st.radio("Maximum Squad Size", [9, 8], horizontal=True)
 
 
 # --- Core Function ---
@@ -85,7 +92,7 @@ global_reqs = {
 }
 
 
-def solve_stronghold(chara_pool, max_deployment=9):
+def solve_stronghold(chara_pool, max_deployment=9, allow_extra=True):
     model = cp_model.CpModel()
 
     # --- 1. Variables ---
@@ -119,13 +126,18 @@ def solve_stronghold(chara_pool, max_deployment=9):
     # --- 2. Constraints ---
     model.Add(sum(is_deployed.values()) <= max_deployment)
 
-    for name in chara_pool:
-        # Each deployed character can have AT MOST one extra tag
-        model.Add(sum(extra_tag[name].values()) <= is_deployed[name])
-        # A character cannot pick a duplicating tag when they already possess it
-        for tag_name in ALLOWED_EXTRA_TAGS:
-            if chara_pool[name].has_tag(TAGS[tag_name]):
+    if not allow_extra:
+        for name in chara_pool:
+            for tag_name in ALLOWED_EXTRA_TAGS:
                 model.Add(extra_tag[name][tag_name] == 0)
+    else:
+        for name in chara_pool:
+            # Each deployed character can have AT MOST one extra tag
+            model.Add(sum(extra_tag[name].values()) <= is_deployed[name])
+            # A character cannot pick a duplicating tag when they already possess it
+            for tag_name in ALLOWED_EXTRA_TAGS:
+                if chara_pool[name].has_tag(TAGS[tag_name]):
+                    model.Add(extra_tag[name][tag_name] == 0)
 
     # Calculate total tag counts
     for tag_name in TAGS_DEF:
@@ -255,4 +267,4 @@ def get_prep_zone_layout(full_pool, deployed_names):
 # --- Execution ---
 if st.button("Run Optimizer"):
     with st.spinner("Calculating optimal squad..."):
-        solve_stronghold(current_pool)
+        solve_stronghold(current_pool, max_deployment, allow_extra)
