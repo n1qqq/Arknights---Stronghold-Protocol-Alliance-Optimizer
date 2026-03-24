@@ -6,22 +6,60 @@ from scaffold import Protocol, Character
 from data import chara_pool
 from ortools.sat.python import cp_model
 
+
 # --- UI Header ---
 st.title("Stronghold Protocol Alliance 2: Faction Optimizer")
 st.subheader("Arknights", False, text_alignment="right")
 st.markdown("Calculate the theoretical maximum faction light-ups for your squad!")
 
+
 # --- User Input ---
-all_charas = list(chara_pool.keys())
-ban_factions = st.multiselect(
-    "Select Operators to BAN (e.g., they are unavailable or you don't want to keep them in your final line-up):",
-    options=all_charas,
-    default=[]  # set default bans here
+def filter_sort_ctrl(chara_pool):
+    # --- SIDEBAR: Filter & Sort Controls ---
+    with st.sidebar:
+        st.header("🎛️ Roster Controls")
+        sort_order = st.selectbox("Sort BAN List By:",
+                                  ["Default (Faction)", "Tier", "Name"])
+        reverse_sort = st.checkbox("Reverse Order", value=False)
+        filter_tiers = st.multiselect("Filter by Tier:",
+                                      range(1, 7), range(1, 7))
+        filter_factions = st.multiselect("Filter by Faction:",
+                                         TAGS_DEF, TAGS_DEF)
+
+    # 1. Start with the full list
+    all_names = list(chara_pool.keys())
+
+    # 2. Apply Filters
+    filtered_names = [name for name in all_names if chara_pool[name].tier in filter_tiers and
+                      (not filter_factions or any(chara_pool[name].has_tag(TAGS[tag]) for tag in filter_factions))]
+
+    # 3. Handle multiselect "memory"
+    if "user_bans" not in st.session_state:
+        st.session_state.user_bans = []
+    # (Ensure previously banned names stay visible even now filtered out)
+    options_list = list(set(filtered_names) | set(st.session_state.user_bans))
+
+    # 4. Apply Sorting
+    if sort_order == "Tier":
+        options_list.sort(key=lambda x: chara_pool[x].tier, reverse=not reverse_sort)
+    elif sort_order == "Name":
+        options_list.sort(reverse=reverse_sort)
+    elif reverse_sort:
+        options_list.reverse()    # "Default (Faction)" keeps the data.py order
+
+    return options_list
+
+
+ban_list = filter_sort_ctrl(chara_pool)
+st.session_state.user_bans = st.multiselect(
+    "Select Operators to BAN (e.g., they are unavailable or you don't want them in your final line-up):",
+    options=ban_list,
+    default=st.session_state.user_bans,
+    format_func=lambda x: f"[{chara_pool[x].tier_roman}] {x}"
 )
 
-# --- Data Cleaning ---
-current_pool = {name: chara for name, chara in chara_pool.items() if name not in ban_factions}
-p = Protocol(current_pool)
+current_pool = {name: chara for name, chara in chara_pool.items() if name not in st.session_state.user_bans}
+
 
 # --- Core Function ---
 TAGS = Character.TAGS
@@ -39,21 +77,26 @@ PREP_ZONE_FACTIONS = TAGS_DEF[19:22]
 PROMOTION_FACTION = TAGS_DEF[22]
 GLOBAL_FACTIONS = TAGS_DEF[19:23]
 
-global_status = {}
 global_reqs = {
     "Foresight": 2,
     "Miracle": 2,
     "Investor": 3,
-    "Skill": 0  # Always on
+    "Skill": 0      # Always on (later flipped off if character pool is too scarce, i.e. < 2 people)
 }
-for tag, threshold in global_reqs.items():
-    global_status[tag] = p.count_tag(TAGS[tag]) >= threshold
 
 
 def solve_stronghold(chara_pool, max_deployment=9):
     model = cp_model.CpModel()
 
     # --- 1. Variables ---
+    p = Protocol(chara_pool)
+
+    global_status = {}
+    for tag, threshold in global_reqs.items():
+        global_status[tag] = p.count_tag(TAGS[tag]) >= threshold
+    # Can't have 2 promotions if you don't even have 2 people!
+    global_status["Skill"] = len(chara_pool) >= 2
+
     is_deployed = {name: model.NewBoolVar(f"deploy_{name}") for name in chara_pool}
 
     # extra_tag[name][tag]: 1 if character "name" equips extra "tag"
@@ -96,7 +139,7 @@ def solve_stronghold(chara_pool, max_deployment=9):
                 extra_contrib.append(extra_tag[name][tag_name])
 
         if tag_name == PROMOTION_FACTION:
-            model.Add(tag_count[tag_name] == 2)
+            model.Add(tag_count[tag_name] == min(len(chara_pool), 2))
         elif tag_name in PREP_ZONE_FACTIONS:
             total_pool_count = p.count_tag(TAGS[tag_name])
             # Count = (Innate Deployed + Extra Deployed) + (Total Pool - Innate Deployed)
