@@ -8,18 +8,23 @@ class Tag:
 
 
 class Character:
-    def __init__(self, *args):
+    def __init__(self, tier, *args):
+        self.tier = tier    # integer 1 - 6
         self.tags = tuple([Character.TAGS[tag] for tag in args])
 
     def __repr__(self):
         return repr(self.tags)
 
+    @property
+    def tier_roman(self):
+        return ["", "I", "II", "III", "IV", "V", "VI"][self.tier]
+
     def has_tag(self, tag):
         return tag in self.tags
-    TAGS_DEF = 'Yan', 'Sargon', 'Victoria', 'Kjerag', 'Laterano', 'Aegir', 'Siracusa', 'Kazimierz', \
-               'Bastion', 'Tenacity', 'Assault', 'Swift', 'Precision', 'Arcane', \
-               'Agility', 'Support', 'Cover', 'Solitary', 'Harmony', \
-               'Foresight', 'Miracle', 'Investor', 'Skill'
+    TAGS_DEF = "Yan", "Sargon", "Victoria", "Kjerag", "Laterano", "Aegir", "Siracusa", "Kazimierz", \
+               "Bastion", "Tenacity", "Assault", "Swift", "Precision", "Arcane", \
+               "Agility", "Support", "Cover", "Solitary", "Harmony", \
+               "Foresight", "Miracle", "Investor", "Skill"
     TAGS = {tag: Tag(tag) for tag in TAGS_DEF}
 
 
@@ -28,7 +33,7 @@ class Protocol:
         self.chara_pool = chara_pool
 
     def __repr__(self):
-        return str(len(self.chara_pool)) + ' Characters Registered.'
+        return str(len(self.chara_pool)) + " Characters Registered."
 
     def count_tag(self, tag):
         return len(self.get_tag(tag))
