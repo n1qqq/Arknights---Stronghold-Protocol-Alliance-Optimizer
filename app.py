@@ -6,6 +6,9 @@ from scaffold import Protocol, Character
 from data import chara_pool
 from ortools.sat.python import cp_model
 
+TAGS = Character.TAGS
+TAGS_DEF = Character.TAGS_DEF
+
 
 # --- UI Header ---
 st.title("Stronghold Protocol Alliance 2: Faction Optimizer")
@@ -62,9 +65,6 @@ current_pool = {name: chara for name, chara in chara_pool.items() if name not in
 
 
 # --- Core Function ---
-TAGS = Character.TAGS
-TAGS_DEF = Character.TAGS_DEF
-
 MAJOR_FACTIONS = TAGS_DEF[:8]
 ALLOWED_EXTRA_MINOR = TAGS_DEF[8:14]
 ALLOWED_EXTRA_TAGS = TAGS_DEF[:14]
